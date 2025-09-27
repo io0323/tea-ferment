@@ -1,3 +1,8 @@
+"""
+茶葉発酵度推定API
+
+茶葉の画像と環境データ（温度・湿度）から発酵度を推定するFastAPIアプリケーション
+"""
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -7,6 +12,7 @@ import io
 import json
 import logging
 import uvicorn
+from model import TeaFermentationModel
 
 # ロギングの設定
 logging.basicConfig(
@@ -31,6 +37,16 @@ app.add_middleware(
 # 共通のレスポンスヘッダーを設定
 @app.middleware("http")
 async def add_cors_headers(request, call_next):
+    """
+    CORSヘッダーを追加するミドルウェア
+    
+    Args:
+        request: HTTPリクエスト
+        call_next: 次のミドルウェアまたはエンドポイント
+    
+    Returns:
+        response: CORSヘッダーが追加されたレスポンス
+    """
     response = await call_next(request)
     response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
@@ -40,10 +56,22 @@ async def add_cors_headers(request, call_next):
 
 @app.get("/")
 async def root():
+    """
+    ルートエンドポイント
+    
+    Returns:
+        dict: APIの説明メッセージ
+    """
     return {"message": "茶葉発酵度推定API"}
 
 @app.get("/health")
 async def health_check():
+    """
+    ヘルスチェックエンドポイント
+    
+    Returns:
+        dict: サーバーの状態
+    """
     return {"status": "healthy"}
 
 @app.post("/predict")
@@ -65,18 +93,18 @@ async def predict(
     """
     try:
         logger.info("Received prediction request")
-        logger.info(f"Temperature: {temperature}°C, Humidity: {humidity}%")
-        logger.info(f"Image filename: {image.filename}, Content type: {image.content_type}")
+        logger.info("Temperature: %s°C, Humidity: %s%%", temperature, humidity)
+        logger.info("Image filename: %s, Content type: %s", image.filename, image.content_type)
         
         # 画像の読み込みと前処理
         try:
             contents = await image.read()
-            logger.info(f"Image size: {len(contents)} bytes")
+            logger.info("Image size: %s bytes", len(contents))
             img = Image.open(io.BytesIO(contents))
             img = img.resize((224, 224))
-            logger.info(f"Processed image size: {img.size}")
-        except Exception as e:
-            logger.error(f"Image processing error: {str(e)}")
+            logger.info("Processed image size: %s", img.size)
+        except (IOError, OSError, ValueError) as e:
+            logger.error("Image processing error: %s", str(e))
             return JSONResponse(
                 status_code=400,
                 content={"detail": f"Invalid image format: {str(e)}"},
@@ -85,16 +113,15 @@ async def predict(
         
         # モデルの初期化と予測
         try:
-            from model import TeaFermentationModel
             model = TeaFermentationModel()
             logger.info("Model initialized")
             
             # 予測の実行
             result = model.predict(contents, temperature, humidity)
-            logger.info(f"Prediction result: {result}")
+            logger.info("Prediction result: %s", result)
             return result
-        except Exception as e:
-            logger.error(f"Model prediction error: {str(e)}")
+        except (ValueError, RuntimeError, ImportError) as e:
+            logger.error("Model prediction error: %s", str(e))
             return JSONResponse(
                 status_code=500,
                 content={"detail": f"Model prediction error: {str(e)}"},
@@ -102,7 +129,7 @@ async def predict(
             )
         
     except Exception as e:
-        logger.error(f"Unexpected error in predict endpoint: {str(e)}")
+        logger.error("Unexpected error in predict endpoint: %s", str(e))
         return JSONResponse(
             status_code=500,
             content={"detail": f"Unexpected error: {str(e)}"},
@@ -120,6 +147,6 @@ if __name__ == "__main__":
             log_level="debug",
             workers=1
         )
-    except Exception as e:
-        logger.error(f"Failed to start server: {str(e)}")
+    except (OSError, RuntimeError) as e:
+        logger.error("Failed to start server: %s", str(e))
         raise 
