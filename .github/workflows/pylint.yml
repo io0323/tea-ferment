@@ -29,10 +29,10 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pylint
+        pip install pylint==3.0.3
         pip install --no-cache-dir -r backend/requirements.txt
     
     - name: Run pylint
       run: |
         cd backend
-        pylint main.py model.py
+        pylint --rcfile=../.pylintrc --score=y main.py model.py

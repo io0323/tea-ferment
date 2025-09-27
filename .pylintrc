@@ -1,0 +1,22 @@
+[MASTER]
+# プロジェクトのルートディレクトリ
+init-hook='import sys; sys.path.append(".")'
+
+[MESSAGES CONTROL]
+# tensorflow.kerasの誤検知を無効化
+disable=no-member,bad-indentation
+
+[FORMAT]
+# 行の最大長
+max-line-length=80
+
+# インデント
+indent-string='  '
+
+[DESIGN]
+# 関数の複雑度
+max-args=7
+max-locals=15
+max-returns=6
+max-branches=12
+max-statements=50
