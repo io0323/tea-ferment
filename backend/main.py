@@ -3,15 +3,17 @@
 
 茶葉の画像と環境データ（温度・湿度）から発酵度を推定するFastAPIアプリケーション
 """
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-import numpy as np
-from PIL import Image
 import io
 import json
 import logging
+
+import numpy as np
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from PIL import Image
 import uvicorn
+
 from model import TeaFermentationModel
 
 # ロギングの設定
@@ -128,7 +130,7 @@ async def predict(
                 headers={"Access-Control-Allow-Origin": "http://localhost:3000"}
             )
         
-    except Exception as e:
+    except (ValueError, RuntimeError, OSError) as e:
         logger.error("Unexpected error in predict endpoint: %s", str(e))
         return JSONResponse(
             status_code=500,
@@ -149,4 +151,4 @@ if __name__ == "__main__":
         )
     except (OSError, RuntimeError) as e:
         logger.error("Failed to start server: %s", str(e))
-        raise 
+        raise
