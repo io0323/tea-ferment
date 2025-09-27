@@ -21,8 +21,10 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pylint fastapi numpy pillow uvicorn tensorflow
+        pip install pylint
+        pip install -r backend/requirements.txt
     
     - name: Run pylint
       run: |
-        pylint backend/main.py backend/model.py
+        cd backend
+        pylint main.py model.py
