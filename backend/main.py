@@ -49,36 +49,29 @@ async def health_check():
 @app.post("/predict")
 async def predict(
     image: UploadFile = File(...),
-    sensor_data: str = Form(...)
+    temperature: float = Form(...),
+    humidity: float = Form(...)
 ):
     """
     茶葉の発酵度を推定するAPIエンドポイント
     
     Args:
         image: 茶葉の画像ファイル
-        sensor_data: センサーデータ（JSON形式）
+        temperature: 温度（°C）
+        humidity: 湿度（%）
     
     Returns:
-        dict: 推定結果（発酵度とレベル）
+        dict: 推定結果（発酵度と寄与度）
     """
     try:
         logger.info("Received prediction request")
-        
-        # センサーデータのパース
-        try:
-            sensor_dict = json.loads(sensor_data)
-            logger.info(f"Parsed sensor data: {sensor_dict}")
-        except json.JSONDecodeError as e:
-            logger.error(f"Invalid JSON data: {sensor_data}")
-            return JSONResponse(
-                status_code=400,
-                content={"detail": "Invalid sensor data format"},
-                headers={"Access-Control-Allow-Origin": "http://localhost:3000"}
-            )
+        logger.info(f"Temperature: {temperature}°C, Humidity: {humidity}%")
+        logger.info(f"Image filename: {image.filename}, Content type: {image.content_type}")
         
         # 画像の読み込みと前処理
         try:
             contents = await image.read()
+            logger.info(f"Image size: {len(contents)} bytes")
             img = Image.open(io.BytesIO(contents))
             img = img.resize((224, 224))
             logger.info(f"Processed image size: {img.size}")
@@ -86,42 +79,33 @@ async def predict(
             logger.error(f"Image processing error: {str(e)}")
             return JSONResponse(
                 status_code=400,
-                content={"detail": "Invalid image format"},
+                content={"detail": f"Invalid image format: {str(e)}"},
                 headers={"Access-Control-Allow-Origin": "http://localhost:3000"}
             )
         
-        # ダミーの推論結果を返す
-        fermentation_score = np.random.uniform(0, 1)
+        # モデルの初期化と予測
+        try:
+            from model import TeaFermentationModel
+            model = TeaFermentationModel()
+            logger.info("Model initialized")
+            
+            # 予測の実行
+            result = model.predict(contents, temperature, humidity)
+            logger.info(f"Prediction result: {result}")
+            return result
+        except Exception as e:
+            logger.error(f"Model prediction error: {str(e)}")
+            return JSONResponse(
+                status_code=500,
+                content={"detail": f"Model prediction error: {str(e)}"},
+                headers={"Access-Control-Allow-Origin": "http://localhost:3000"}
+            )
         
-        # 発酵レベルの判定
-        if fermentation_score < 0.3:
-            level = "未発酵"
-        elif fermentation_score < 0.7:
-            level = "中発酵"
-        else:
-            level = "高発酵"
-        
-        response = {
-            "fermentation_score": float(fermentation_score),
-            "fermentation_level": level,
-            "temperature": sensor_dict["temperature"],
-            "humidity": sensor_dict["humidity"]
-        }
-        logger.info(f"Sending response: {response}")
-        return JSONResponse(
-            content=response,
-            headers={
-                "Access-Control-Allow-Origin": "http://localhost:3000",
-                "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-                "Access-Control-Allow-Headers": "Content-Type"
-            }
-        )
-    
     except Exception as e:
-        logger.error(f"Unexpected error occurred: {str(e)}")
+        logger.error(f"Unexpected error in predict endpoint: {str(e)}")
         return JSONResponse(
             status_code=500,
-            content={"detail": str(e)},
+            content={"detail": f"Unexpected error: {str(e)}"},
             headers={"Access-Control-Allow-Origin": "http://localhost:3000"}
         )
 
