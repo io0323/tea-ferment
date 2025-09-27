@@ -8,11 +8,11 @@ import json
 import logging
 
 import numpy as np
+import uvicorn
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from PIL import Image
-import uvicorn
 
 from model import TeaFermentationModel
 
@@ -152,3 +152,4 @@ if __name__ == "__main__":
     except (OSError, RuntimeError) as e:
         logger.error("Failed to start server: %s", str(e))
         raise
+
